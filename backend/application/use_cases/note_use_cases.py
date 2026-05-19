@@ -24,32 +24,32 @@ def create_note(note_repo: NoteRepository,
                 note_services: NoteService,
                 name: str, theme_id: int | None = None
                 ) -> OperationResult[int]:
-    sibling_names = note_services.get_names_in_theme_id(theme_id)
+    sibling_names = note_services.get_names_in_theme_id(theme_id, user_id)
     note: NewNoteDTO = Note.create(name, user_id, set(sibling_names), theme_id)
     note_id = note_repo.add(note)
     return OperationResult(True, "Nota creada exitosamente", note_id)
 
 @handle_usecase_errors
-def delete_note(note_repo: NoteRepository, note_id: int) -> OperationResult[None]:
-    note = note_repo.get_by_id(note_id)
+def delete_note(note_repo: NoteRepository, note_id: int, user_id: int) -> OperationResult[None]:
+    note = note_repo.get_by_id(note_id, user_id)
     if not note:
         return OperationResult(False, "No se pudo eliminar la nota porque no existe", None)
-    note_repo.delete(note_id)
+    note_repo.delete(note_id, user_id)
     return OperationResult(True, "Nota eliminada correctamente", None)
 
 @handle_usecase_errors
-def delete_many_notes(note_repo: NoteRepository, note_ids: list[int]) -> OperationResult[None]:
-    note_repo.delete_many(note_ids)
+def delete_many_notes(note_repo: NoteRepository, note_ids: list[int], user_id: int) -> OperationResult[None]:
+    note_repo.delete_many(note_ids, user_id)
     return OperationResult(True, "Notas eliminadas correctamente", None)
 
 @handle_usecase_errors
 def rename_note(note_repo: NoteRepository, 
                 note_service: NoteService,
-                note_id: int, new_name: str) -> OperationResult[None]:
-    note = note_repo.get_by_id(note_id)
+                note_id: int, new_name: str, user_id: int) -> OperationResult[None]:
+    note = note_repo.get_by_id(note_id, user_id)
     if not note:
         return OperationResult(False, "No se pudo renombrar la nota porque no existe", None)
-    sibling_names = note_service.get_names_in_theme_id(note._theme_id)
+    sibling_names = note_service.get_names_in_theme_id(user_id, note._theme_id)
     note.change_name(new_name, set(sibling_names))
     note_repo.update(note)
     return OperationResult(True, "Nombre de la nota actualizado", None)
@@ -59,22 +59,23 @@ def move_to_theme(note_repo: NoteRepository,
                           theme_repo: ThemeRepository,
                           note_service: NoteService,
                           note_id: int, 
+                          user_id: int,
                           new_theme_id: int | None = None) -> OperationResult[None]:
-    note = note_repo.get_by_id(note_id)
+    note = note_repo.get_by_id(note_id, user_id)
     if not note:
         return OperationResult(False, "No se pudo cambiar el tema de la nota porque la nota dada no existe", None)
     if new_theme_id is not None:
-        theme = theme_repo.get_by_id(new_theme_id)
+        theme = theme_repo.get_by_id(new_theme_id, user_id)
         if not theme:
             return OperationResult(False, "No se pudo cambiar el tema de la nota porque el tema dado es inexistente", None)
-    sibling_names = note_service.get_names_in_theme_id(new_theme_id)
+    sibling_names = note_service.get_names_in_theme_id(user_id, new_theme_id)
     note.change_theme_id(new_theme_id, set(sibling_names))
     note_repo.update(note)
     return OperationResult(True, "Tema de la nota actualizado", None)
 
 @handle_usecase_errors
-def update_note_content(note_repo: NoteRepository, note_id: int, content: str) -> OperationResult[None]:
-    note = note_repo.get_by_id(note_id)
+def update_note_content(note_repo: NoteRepository, note_id: int, content: str, user_id: int) -> OperationResult[None]:
+    note = note_repo.get_by_id(note_id, user_id)
     if not note:
         return OperationResult(False, "No se pudo actualizar el contenido de la nota porque no existe", None)
     """The time must be in UTC."""
@@ -86,8 +87,8 @@ def update_note_content(note_repo: NoteRepository, note_id: int, content: str) -
 @handle_usecase_errors
 def register_time_to_note(
     note_repo: NoteRepository, 
-                minutes: float, note_id: int) -> OperationResult[None]:
-    note = note_repo.get_by_id(note_id)
+                minutes: float, note_id: int, user_id: int) -> OperationResult[None]:
+    note = note_repo.get_by_id(note_id, user_id)
     if not note:
         return OperationResult(False, "No se pudo registrar un tiempo porque la nota dada no existe", None)
     #UTC
@@ -101,12 +102,12 @@ def register_time_to_note(
 def get_unique_note_name(
                     theme_repo: ThemeRepository,
                     note_service: NoteService,
-                    name: str, theme_id: int | None = None) -> OperationResult[str]:
+                    name: str, user_id: int, theme_id: int | None = None) -> OperationResult[str]:
     if theme_id:
-        theme = theme_repo.get_by_id(theme_id)
+        theme = theme_repo.get_by_id(theme_id, user_id)
         if not theme:
             return OperationResult(False, "No se pudo obtener un unico nombre para una nota porque el tema dado no existe", None)
-    u_name = note_service.get_unique_name_for_theme(name, theme_id)
+    u_name = note_service.get_unique_name_for_theme(name, user_id, theme_id)
     return OperationResult(True, "", u_name)
 
 @handle_usecase_errors

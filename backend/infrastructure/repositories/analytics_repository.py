@@ -12,7 +12,7 @@ class AnalyticsRepository:
         self.session = session
         logger.info("AnalyticsRepository initialized succesfully:: %s", session)
 
-    def get_time_and_note_counts(self, family_theme_ids: list[int], theme_id: int) -> ThemeRawStatsDTO:
+    def get_time_and_note_counts(self, family_theme_ids: list[int], theme_id: int, user_id: int) -> ThemeRawStatsDTO:
         """Retrieves aggregated time and note metrics for a specified list of themes."""
         try:
             result = (
@@ -23,7 +23,11 @@ class AnalyticsRepository:
                 )
                 .select_from(models.NoteModel)
                 .outerjoin(models.TimeModel, models.NoteModel.id == models.TimeModel.note_id)
-                .filter(models.NoteModel.theme_id.in_(family_theme_ids))
+                .filter(
+                    models.NoteModel.theme_id.in_(family_theme_ids),
+                    models.NoteModel.user_id == user_id,
+                    models.NoteModel.state == True
+                    )
                 .first()
             )
             
@@ -42,12 +46,16 @@ class AnalyticsRepository:
             logger.exception("get_time_and_note_counts(id=%s) [Unexpected error]", theme_id)
             raise RepositoryError("unexpected_error") from e
 
-    def count_direct_notes(self, theme_id: int) -> int:
+    def count_direct_notes(self, theme_id: int, user_id: int) -> int:
         """Counts notes that pertain exclusively to the given theme."""
         try:
             count = (
                 self.session.query(func.count(models.NoteModel.id))
-                .filter(models.NoteModel.theme_id == theme_id)
+                .filter(
+                    models.NoteModel.theme_id == theme_id,
+                    models.NoteModel.user_id == user_id,
+                    models.NoteModel.state == True        
+                    )
                 .scalar()
             )
             logger.info("count_direct_notes(theme_id=%s) [Success]", theme_id)
@@ -59,12 +67,16 @@ class AnalyticsRepository:
             logger.exception("count_direct_notes(id=%s) [Unexpected error]", theme_id)
             raise RepositoryError("unexpected_error") from e
 
-    def get_aggregated_content(self, family_theme_ids: list[int], theme_id: int) -> str:
+    def get_aggregated_content(self, family_theme_ids: list[int], theme_id: int, user_id: int) -> str:
         """Retrieves the content for lexical analysis."""
         try:
             notes_content = (
                 self.session.query(models.NoteModel.content)
-                .filter(models.NoteModel.theme_id.in_(family_theme_ids))
+                .filter(
+                    models.NoteModel.theme_id.in_(family_theme_ids),
+                    models.NoteModel.user_id == user_id,
+                    models.NoteModel.state == True
+                    )
                 .all()
             )
             logger.info("get_aggregated_content(theme_id=%s) [Success]", theme_id)

@@ -6,19 +6,19 @@ class NoteService:
     def __init__(self, note_repo: NoteRepository):
         self.note_repo = note_repo
 
-    def exists(self, note_id: int) -> bool:
-        return self.note_repo.get_by_id(note_id) is not None
+    def exists(self, note_id: int, user_id: int) -> bool:
+        return self.note_repo.get_by_id(note_id, user_id) is not None
 
-    def get_unique_name_for_theme(self, base_name: str, theme_id: int | None = None) -> str:
+    def get_unique_name_for_theme(self, base_name: str, user_id: int, theme_id: int | None = None) -> str:
         if theme_id:
-            notes = self.note_repo.get_notes_by_theme_id(theme_id)
+            notes = self.note_repo.get_notes_by_theme_id(theme_id, user_id)
         else:
-            notes = self.note_repo.get_notes_without_theme_id()
+            notes = self.note_repo.get_notes_without_theme_id(user_id)
         
         sibling_names = [n.name for n in notes]
         
         return generate_unique_name(base_name, sibling_names)
     
-    def get_names_in_theme_id(self, theme_id: int | None = None) -> list[str]:
-        notes = self.note_repo.get_notes_by_theme_id(theme_id) if theme_id else self.note_repo.get_notes_without_theme_id()
+    def get_names_in_theme_id(self, user_id: int, theme_id: int | None = None) -> list[str]:
+        notes = self.note_repo.get_notes_by_theme_id(theme_id, user_id) if theme_id else self.note_repo.get_notes_without_theme_id(user_id)
         return [n.name for n in notes if notes]
